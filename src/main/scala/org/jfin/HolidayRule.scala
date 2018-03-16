@@ -36,7 +36,7 @@ trait SimpleHolidayRule extends HolidayRule {
   def condition(d:LocalDate):Boolean
   override val name:String
 
-  override def isHoliday(d: LocalDate): Option[Holiday] = if (condition(d)) Some(Holiday(this)) else None
+  override def isHoliday(d: LocalDate): Option[Holiday] = if (condition(d)) Some(Holiday(d,this)) else None
 }
 
 case class SpecificDay(date:LocalDate, name:String) extends SimpleHolidayRule {
