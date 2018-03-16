@@ -1,10 +1,14 @@
 package org.jfin
 
+import java.time.format.{DateTimeFormatter, TextStyle}
 import java.time.{DayOfWeek, LocalDate, Month}
-import java.util.Calendar
+import java.util.{Calendar, Locale}
 
 trait HolidayRule {
   def isHoliday(d:LocalDate):Option[Holiday]
+
+  def name:String
+  def describe:String
 
   def following(following:HolidayRule):HolidayRule = Following(this,following)
   def followingWeekend():HolidayRule = Following(this,Weekend)
@@ -17,21 +21,25 @@ trait HolidayRule {
 
   def ++(b:HolidayRule): HolidayRule = CompoundHolidayRule(this,b)
 
+  def describeMonth(m:Month):String = m.getDisplayName(TextStyle.FULL,Locale.UK)
+
 }
 
 trait SimpleHolidayRule extends HolidayRule {
   def condition(d:LocalDate):Boolean
-  val name:String
+  override val name:String
 
-  override def isHoliday(d: LocalDate): Option[Holiday] = if (condition(d)) Some(Holiday(name)) else None
+  override def isHoliday(d: LocalDate): Option[Holiday] = if (condition(d)) Some(Holiday(this)) else None
 }
 
 case class SpecificDay(date:LocalDate, name:String) extends SimpleHolidayRule {
-  def condition(d:LocalDate):Boolean = d.isEqual(date)
+  override def condition(d:LocalDate):Boolean = d.isEqual(date)
+  override def describe:String = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
 }
 
 case class SpecificDayOfYear(dayOfMonth:Int, month:Month, name:String) extends SimpleHolidayRule {
-  def condition(d:LocalDate):Boolean = d.getDayOfMonth == dayOfMonth && d.getMonth == month
+  override def condition(d:LocalDate):Boolean = d.getDayOfMonth == dayOfMonth && d.getMonth == month
+  override def describe:String = s"$dayOfMonth of ${describeMonth(month)}"
 }
 
 case class Following(rule:HolidayRule, following:HolidayRule) extends HolidayRule {
@@ -42,55 +50,65 @@ case class Following(rule:HolidayRule, following:HolidayRule) extends HolidayRul
     else
       rule.isHoliday(d)
 
+  override val name:String = rule.name
+  override def describe:String = s"${rule.describe} or first day following ${following.describe}"
 }
 
 case class CompoundHolidayRule(a:HolidayRule, b:HolidayRule) extends HolidayRule {
   override def isHoliday(d: LocalDate): Option[Holiday] = a.isHoliday(d).orElse( b.isHoliday(d) )
+  override def describe:String = s"${a.describe} and ${b.describe}"
+  override val name:String = s"${a.name} and ${b.name}"
 }
 
 case class ExceptInYears(rule:HolidayRule, excludeYears:List[Int]) extends HolidayRule {
-  def isHoliday(d:LocalDate): Option[Holiday] = if(excludeYears.contains(d.getYear)) None else rule.isHoliday(d)
+  override def isHoliday(d:LocalDate): Option[Holiday] = if(excludeYears.contains(d.getYear)) None else rule.isHoliday(d)
+  override def describe:String = s"${rule.describe} except in ${excludeYears.mkString(", ")}"
+  override val name:String = rule.name
 }
 
 case class OnlyInYears(rule:HolidayRule, includeYears:List[Int]) extends HolidayRule {
-  def isHoliday(d:LocalDate): Option[Holiday] = if(includeYears.contains(d.getYear)) rule.isHoliday(d) else None
-}
-
-object NewYearsDay extends SimpleHolidayRule {
-  override def condition(d: LocalDate): Boolean = d.getDayOfMonth == 1 && d.getMonth == Month.JANUARY
-  override val name = "New Years Day"
+  override def isHoliday(d:LocalDate): Option[Holiday] = if(includeYears.contains(d.getYear)) rule.isHoliday(d) else None
+  override def describe:String = s"${rule.describe} in ${includeYears.mkString(", ")}"
+  override val name:String = rule.name
 }
 
 object Weekend extends SimpleHolidayRule {
   override def condition(d: LocalDate): Boolean = d.getDayOfWeek == DayOfWeek.SATURDAY || d.getDayOfWeek == DayOfWeek.SUNDAY
   override val name = "Weekend"
+  override def describe:String = name
 }
 
 case class SpecificDate(date:LocalDate, name:String) extends SimpleHolidayRule {
   def condition(d:LocalDate):Boolean = d.isEqual( date )
+
+  override def describe: String = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
 }
 
 object GoodFriday extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean = Easter.goodFridays.get(d.getYear).contains(d.getDayOfYear)
   override val name:String = "Good Friday"
+  override def describe: String = "Friday before Easter Day"
 }
 
 object EasterMonday extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean = Easter.easterMondays.get(d.getYear).contains(d.getDayOfYear)
   override val name:String = "Easter Monday"
+  override def describe: String = "Monday after Easter Day"
 }
 
 case class FirstMondayOfMonth(month:Month, name:String) extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean =
     d.getMonth == month && d.getDayOfMonth <= 7 && d.getDayOfWeek == DayOfWeek.MONDAY
+  override def describe: String = s"First Monday of ${describeMonth(month)}"
 }
 
 case class LastMondayOfMonth(month:Month, name:String) extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean =
     d.getMonth == month && d.getDayOfMonth >= d.lengthOfMonth()-6 && d.getDayOfWeek == DayOfWeek.MONDAY
+  override def describe: String = s"Last Monday of ${describeMonth(month)}"
 }
 
-object ChristmasDay extends SimpleHolidayRule {
+object ChristmasDayFollowingWeekend extends SimpleHolidayRule {
 
 
   override def condition(d: LocalDate): Boolean = d.isEqual( christmasDayForYear(d.getYear) )
@@ -102,9 +120,10 @@ object ChristmasDay extends SimpleHolidayRule {
   }
 
   override val name: String = "Christmas Day"
+  override def describe: String = s"25 December or first day following weekend"
 }
 
-object BoxingDay extends SimpleHolidayRule {
+object BoxingDayFollowingWeekend extends SimpleHolidayRule {
   override def condition(d: LocalDate): Boolean = d.isEqual( boxingDayForYear(d.getYear) )
 
   def boxingDayForYear(y:Int):LocalDate = LocalDate.of(y,12,26).getDayOfWeek match {
@@ -114,6 +133,7 @@ object BoxingDay extends SimpleHolidayRule {
   }
 
   override val name: String = "Boxing Day"
+  override def describe: String = s"26 December or first day following weekend"
 }
 
 

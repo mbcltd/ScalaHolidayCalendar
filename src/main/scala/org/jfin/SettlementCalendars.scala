@@ -6,14 +6,14 @@ object SettlementCalendars {
 
   val gb = HolidayCalendar(
     List(
-      NewYearsDay.followingWeekend(),
+      SpecificDayOfYear(1,Month.JANUARY,"New Years Day").followingWeekend(),
       GoodFriday,
       EasterMonday,
       FirstMondayOfMonth(Month.MAY,"Early May bank holiday"),
       LastMondayOfMonth(Month.MAY,"Spring bank holiday").exceptInYears(List(2002,2012)),
       LastMondayOfMonth(Month.AUGUST,"Summer bank holiday"),
-      ChristmasDay,
-      BoxingDay,
+      ChristmasDayFollowingWeekend,
+      BoxingDayFollowingWeekend,
       SpecificDay(LocalDate.of(2002,6,3),"Golden Jubilee Bank Holiday"),
       SpecificDay(LocalDate.of(2002,6,4),"Special Spring Bank Holiday"),
       SpecificDay(LocalDate.of(2011,4,29),"Royal Wedding Bank Holiday"),
