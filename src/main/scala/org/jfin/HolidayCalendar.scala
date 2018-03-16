@@ -8,8 +8,5 @@ case class HolidayCalendar(rules:List[HolidayRule], locale:String) {
   def holiday(d:LocalDate): Option[Holiday] = rules.flatMap( _.isHoliday(d) ).headOption
 }
 
-case class Holiday(name:String, isObserved:Boolean = false) {
-  def observed:Holiday = Holiday(name, isObserved = true)
-  def description:String = if(isObserved) name + " Observed" else name
-}
+case class Holiday(name:String)
 

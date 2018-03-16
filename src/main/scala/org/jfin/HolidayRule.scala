@@ -38,7 +38,7 @@ case class Following(rule:HolidayRule, following:HolidayRule) extends HolidayRul
 
   def isHoliday(d:LocalDate): Option[Holiday] =
     if(following.isHoliday(d).isDefined)
-      isHoliday(d.plusDays(1)).map( _.observed)
+      isHoliday(d.plusDays(1))
     else
       rule.isHoliday(d)
 
@@ -80,26 +80,14 @@ object EasterMonday extends SimpleHolidayRule {
   override val name:String = "Easter Monday"
 }
 
-object FirstMondayOfMay extends SimpleHolidayRule {
+case class FirstMondayOfMonth(month:Month, name:String) extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean =
-    d.getMonth == Month.MAY && d.getDayOfMonth <= 7 && d.getDayOfWeek == DayOfWeek.MONDAY
-
-  override val name:String = "First Monday of May"
+    d.getMonth == month && d.getDayOfMonth <= 7 && d.getDayOfWeek == DayOfWeek.MONDAY
 }
 
-object LastMondayOfMay extends SimpleHolidayRule {
+case class LastMondayOfMonth(month:Month, name:String) extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean =
-    d.getMonth == Month.MAY && d.getDayOfMonth >= 25 && d.getDayOfWeek == DayOfWeek.MONDAY
-
-  override val name:String = "Last Monday of May"
-}
-
-
-object LastMondayOfAugust extends SimpleHolidayRule {
-  override def condition(d:LocalDate):Boolean =
-    d.getMonth == Month.AUGUST && d.getDayOfMonth >= 25 && d.getDayOfWeek == DayOfWeek.MONDAY
-
-  override val name:String = "Last Monday of August"
+    d.getMonth == month && d.getDayOfMonth >= d.lengthOfMonth()-6 && d.getDayOfWeek == DayOfWeek.MONDAY
 }
 
 object ChristmasDay extends SimpleHolidayRule {
