@@ -21,8 +21,15 @@ trait HolidayRule {
 
   def ++(b:HolidayRule): HolidayRule = CompoundHolidayRule(this,b)
 
+  def describeNumber(n:Int):String = s"$n${numberSuffix(n)}"
   def describeMonth(m:Month):String = m.getDisplayName(TextStyle.FULL,Locale.UK)
 
+  def numberSuffix(n:Int):String = if(n>3 && n<21) "th" else n % 10 match {
+    case 1 => "st"
+    case 2 => "nd"
+    case 3 => "rd"
+    case _ => "th"
+  }
 }
 
 trait SimpleHolidayRule extends HolidayRule {
@@ -39,7 +46,7 @@ case class SpecificDay(date:LocalDate, name:String) extends SimpleHolidayRule {
 
 case class SpecificDayOfYear(dayOfMonth:Int, month:Month, name:String) extends SimpleHolidayRule {
   override def condition(d:LocalDate):Boolean = d.getDayOfMonth == dayOfMonth && d.getMonth == month
-  override def describe:String = s"$dayOfMonth of ${describeMonth(month)}"
+  override def describe:String = s"${describeNumber(dayOfMonth)} of ${describeMonth(month)}"
 }
 
 case class Following(rule:HolidayRule, following:HolidayRule) extends HolidayRule {
@@ -120,7 +127,7 @@ object ChristmasDayFollowingWeekend extends SimpleHolidayRule {
   }
 
   override val name: String = "Christmas Day"
-  override def describe: String = s"25 December or first day following weekend"
+  override def describe: String = s"25th of December or first day following weekend"
 }
 
 object BoxingDayFollowingWeekend extends SimpleHolidayRule {
@@ -133,7 +140,7 @@ object BoxingDayFollowingWeekend extends SimpleHolidayRule {
   }
 
   override val name: String = "Boxing Day"
-  override def describe: String = s"26 December or first day following weekend"
+  override def describe: String = s"26th of December or first day following weekend"
 }
 
 
